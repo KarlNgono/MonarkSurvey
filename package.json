@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "description": "Sample NodeJS backend for SurveyJS: Survey Library and Survey Creator",
   "main": "index.js",
-  "start": "node index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "body-parser": "^1.20.3",
