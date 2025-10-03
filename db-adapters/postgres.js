@@ -10,9 +10,9 @@ const dbConfig = {
   database: process.env.DATABASE_NAME,
   user: process.env.DATABASE_USER,
   password: process.env.DATABASE_PASSWORD,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: process.env.DATABASE_SSL === "true"
+      ? { rejectUnauthorized: false }
+      : false
 };
 
 const pool = new Pool(dbConfig);

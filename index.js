@@ -167,9 +167,16 @@ app.get(apiBaseAddress + "/changeName", (req, res) => {
     const name = req.query["name"];
     storage.changeName(id, name, result => res.json(result));
 });
-app.get(apiBaseAddress + "/create", (req, res) => {
-    const name = req.query["name"];
-    storage.addSurvey(name, survey => res.json(survey));
+app.post(apiBaseAddress + "/create", (req, res) => {
+    const { title, json } = req.body;
+    const name = title && title.trim() !== "" ? title : "Untitled";
+    storage.addSurvey(name, survey => {
+        if (json) {
+            storage.storeSurvey(survey.id, name, json, stored => res.json(stored));
+        } else {
+            res.json(survey);
+        }
+    });
 });
 app.post(apiBaseAddress + "/changeJson", (req, res) => {
     const {id, json} = req.body;
