@@ -13,6 +13,7 @@ const app = express();
 const storage = PostgresStorage();
 
 app.use(helmet());
+
 app.use(
     session({
         secret: process.env.SESSION_SECRET,
@@ -22,14 +23,18 @@ app.use(
     })
 );
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+
 app.use(
     cors({
         origin: process.env.FRONTEND_URL,
         credentials: true,
     })
 );
+
 app.get(apiBaseAddress + "/getUsers", async (req, res) => {
     try {
         const result = await storage.dbQuery("SELECT id, name, email FROM users ORDER BY id ASC");
@@ -39,22 +44,23 @@ app.get(apiBaseAddress + "/getUsers", async (req, res) => {
         res.status(500).json({message: "Server error"});
     }
 });
+
 app.delete(apiBaseAddress + "/users/:id", async (req, res) => {
-    const { id } = req.params;
+    const {id} = req.params;
     try {
         await storage.dbQuery("DELETE FROM users WHERE id = $1", [id]);
-        res.json({ message: "Utilisateur supprimé", id });
+        res.json({message: "Utilisateur supprimé", id});
     } catch (err) {
         console.error("Delete user error:", err);
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({message: "Server error"});
     }
 });
 
 app.post(apiBaseAddress + "/updateUser/:id", async (req, res) => {
     try {
         const id = req.params.id;
-        const { name, email, password } = req.body;
-        if (!name || !email) return res.status(400).json({ message: "Missing fields" });
+        const {name, email, password} = req.body;
+        if (!name || !email) return res.status(400).json({message: "Missing fields"});
 
         let query = "UPDATE users SET name=$1, email=$2";
         const values = [name, email];
@@ -70,28 +76,29 @@ app.post(apiBaseAddress + "/updateUser/:id", async (req, res) => {
 
         const result = await storage.dbQuery(query, values);
         const updatedUser = result.rows[0];
-        if (!updatedUser) return res.status(404).json({ message: "User not found" });
+        if (!updatedUser) return res.status(404).json({message: "User not found"});
 
-        res.json({ message: "User updated", user: updatedUser });
+        res.json({message: "User updated", user: updatedUser});
     } catch (err) {
         console.error("Update user error:", err);
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({message: "Server error"});
     }
 });
 
 app.post(apiBaseAddress + "/changePassword", async (req, res) => {
     try {
-        const { id, newPassword } = req.body;
-        if (!id || !newPassword) return res.status(400).json({ message: "Missing fields" });
+        const {id, newPassword} = req.body;
+        if (!id || !newPassword) return res.status(400).json({message: "Missing fields"});
 
         const hashed = await bcrypt.hash(newPassword, 10);
         await storage.dbQuery("UPDATE users SET password=$1 WHERE id=$2", [hashed, id]);
-        res.json({ message: "Password updated" });
+        res.json({message: "Password updated"});
     } catch (err) {
         console.error("Change password error:", err);
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({message: "Server error"});
     }
 });
+
 app.post(apiBaseAddress + "/signup", async (req, res) => {
     try {
         const {name, email, password} = req.body;
@@ -158,17 +165,20 @@ app.get(apiBaseAddress + "/me", async (req, res) => {
 });
 
 app.get(apiBaseAddress + "/getActive", (req, res) => storage.getSurveys(result => res.json(result)));
+
 app.get(apiBaseAddress + "/getSurvey", (req, res) => {
     const surveyId = req.query["surveyId"];
     storage.getSurvey(surveyId, result => res.json(result));
 });
+
 app.get(apiBaseAddress + "/changeName", (req, res) => {
     const id = req.query["id"];
     const name = req.query["name"];
     storage.changeName(id, name, result => res.json(result));
 });
+
 app.post(apiBaseAddress + "/create", (req, res) => {
-    const { title, json } = req.body;
+    const {title, json} = req.body;
     const name = title && title.trim() !== "" ? title : "Untitled";
     storage.addSurvey(name, survey => {
         if (json) {
@@ -178,20 +188,30 @@ app.post(apiBaseAddress + "/create", (req, res) => {
         }
     });
 });
+
 app.post(apiBaseAddress + "/changeJson", (req, res) => {
     const {id, json} = req.body;
-    storage.storeSurvey(id, null, json, survey => res.json(survey));
+    const name = json?.title || "Untitled";
+    storage.storeSurvey(id, name, json, survey => res.json(survey));
 });
+
 app.post(apiBaseAddress + "/post", (req, res) => {
     const {postId, surveyResult} = req.body;
     storage.postResults(postId, surveyResult, result => res.json(result.json));
 });
+
 app.get(apiBaseAddress + "/delete", (req, res) => {
     const id = req.query["id"];
     storage.deleteSurvey(id, () => res.json({id}));
 });
+
 app.get(apiBaseAddress + "/results", (req, res) => {
     const postId = req.query["postId"];
+    storage.getResults(postId, result => res.json(result));
+});
+
+app.get("/api/results/:postId", (req, res) => {
+    const postId = req.params.postId;
     storage.getResults(postId, result => res.json(result));
 });
 
